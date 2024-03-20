@@ -20,37 +20,8 @@
         ctx.fillStyle = "red"
         ctx.fillRect(0, 0, 100, 100)
 
-        class Vertex2{
-            constructor(x,y){
-                this.x = x
-                this.y = y
-            }
-        }
-
-        class Edge{
-            constructor(vertexOne, vertexTwo){
-                this.vertexOne = vertexOne;
-                this.vertexTwo = vertexTwo;
-            }
-            getTangent(){
-                
-            }
-        }
-
-        /**
-         * This has to be counter clockwise
-         */
-        class Triangle{
-            constructor(vertexOne, vertexTwo, vertexThree){
-                this.vertexOne = vertexOne
-                this.vertexTwo = vertexTwo
-                this.vertexThree = vertexThree
-            }
-        }
-
-
-        class Pixel{
-            constructor(x,y,r,g,b){
+        class Pixel {
+            constructor(x, y, r, g, b) {
                 this.x = x;
                 this.y = y;
                 this.r = r;
@@ -58,6 +29,112 @@
                 this.b = b;
             }
         }
+
+        class Vertex2 {
+            constructor(x, y) {
+                this.x = x
+                this.y = y
+            }
+            getSubtract(other) {
+                return new Vertex2(other.x - this.x, other.y - this.y);
+            }
+            getAdd(other) {
+                return new Vertex2(other.x + this.x, other.y + this.y);
+            }
+            getScaled(scalar) {
+                return new Vertex2(this.x * scalar, this.y * scalar);
+            }
+            getLength() {
+                return Math.sqrt(this.x ** 2 + this.y ** 2);
+            }
+            getNormalized() {
+                return new Vertex2(this.x / this.getLength(), this.y / this.getLength());
+            }
+            getPerpendicular() {
+                return new Vertex2(-this.y, this.x);
+            }
+            getDot(other) {
+                return this.x * other.x + this.y * other.y;
+            }
+        }
+
+        class Edge {
+            constructor(vertexOne, vertexTwo) {
+                this.vertexOne = vertexOne;
+                this.vertexTwo = vertexTwo;
+            }
+            getTangent() {
+                return this.vertexOne.getSubtract(this.vertexTwo);
+            }
+            getNormalizedTangent() {
+                return this.getTangent().getNormalized();
+            }
+            getPerpendicular() {
+                return this.getNormalizedTangent().getPerpendicular();
+            }
+            getABC() {
+                let AB = this.getPerpendicular();
+                let dot = AB.getDot(this.vertexOne);
+                let C = -dot;
+                return { A: AB.x, B: AB.y, C }
+            }
+            getPixels() {
+
+                let startX = this.vertexOne.x;
+                let startY = this.vertexOne.y;
+                let endX = this.vertexTwo.x;
+                let endY = this.vertexTwo.y;
+
+                let toReturn = [];
+
+                let tangent = this.getNormalizedTangent();
+                let absX = Math.abs(tangent.x)
+                let absY = Math.abs(tangent.y)
+                let m = Math.max(absX, absY);
+                let inverse = 1 / m;
+                let offTangent = new Vertex2(tangent.x * inverse, tangent.y * inverse)
+                let steps = this.getTangent().getLength()/offTangent.getLength();
+
+                let x = startX;
+                let y = startY;
+
+                let count = 0;
+                while (count < steps) {
+                    count++;
+                    toReturn.push(new Pixel(Math.round(x), Math.round(y), 255, 255, 255));
+                    x += offTangent.x;
+                    y += offTangent.y;
+                    
+                }
+
+
+                // for(let x = startX; x <= endX; x++){
+                //     for(let y = startY; y < endY; y++){
+                //         toReturn.push(new Pixel(x,y, 255,255,255))
+                //     }
+                // }
+
+
+                return toReturn;
+            }
+        }
+
+
+
+        
+
+        /**
+         * This has to be counter clockwise
+         */
+        class Triangle {
+            constructor(vertexOne, vertexTwo, vertexThree) {
+                this.vertexOne = vertexOne
+                this.vertexTwo = vertexTwo
+                this.vertexThree = vertexThree
+            }
+        }
+
+
 
         let zBuffer = []
 
@@ -67,29 +144,53 @@
         for (let x = 0; x < bufferWidth; x++) {
             let col = []
             for (let y = 0; y < bufferHeight; y++) {
-                col.push(new Pixel(x,y,0,0,0))
+                col.push(new Pixel(x, y, 0, 0, 0))
             }
             zBuffer.push(col)
         }
 
+        
+
         //Magic
 
-        let vertexOne = new Vertex2(0,0)
-        let vertexTwo = new Vertex2(20,7)
-        let edge = new Edge(vertexOne,vertexTwo)
+        let one = new Vertex2(10, 10);
+        let two = new Vertex2(30, 90);
+        let three = new Vertex2(80, 10);
+
+        // let v1 = new Vertex2(10, 10);
+        // let v2 = new Vertex2(30, 90);
+        let e1 = new Edge(one, two);
+        let e2 = new Edge(two, three);
+        let e3 = new Edge(three, one);
+        let pixels1 = e1.getPixels();
+        let pixels2 = e2.getPixels();
+        let pixels3 = e3.getPixels();
+
+        for (let pixel of pixels1) {
+            zBuffer[pixel.x][pixel.y] = pixel;
+        }
+        for (let pixel of pixels2) {
+            zBuffer[pixel.x][pixel.y] = pixel;
+        }
+        for (let pixel of pixels3) {
+            zBuffer[pixel.x][pixel.y] = pixel;
+        }
+
+
 
 
 
 
         // Draw the buffer
 
-        for(let x = 0; x < bufferWidth; x++){
-            for(let y = 0; y < bufferHeight; y++){
+        for (let x = 0; x < bufferWidth; x++) {
+            for (let y = 0; y < bufferHeight; y++) {
                 let pixel = zBuffer[x][y]
                 ctx.fillStyle = `rgb(${pixel.r},${pixel.g},${pixel.b})`;
-                ctx.fillRect(pixel.x,pixel.y,1,1)
+                ctx.fillRect(pixel.x, pixel.y, 1, 1)
             }
         }
+
 
 
 
